@@ -1,8 +1,13 @@
 import numpy as np
 import json
+import gc
+
+import torch
 from pycocotools.coco import COCO
 import cv2
 from matplotlib import pyplot as plt
+from torch.utils.data import DataLoader
+
 
 IMAGE_HEIGHT, IMAGE_WIDTH = 1280, 768
 
@@ -48,7 +53,6 @@ for img_id in image_ids:
 
     image = extend_image(image, 3)
     mask = extend_image(mask)
-    print(img_id)
     images.append(image)
     masks.append(mask)
 
@@ -65,4 +69,24 @@ for i in range(10):
 plt.show()
 
 
+DATA_SIZE = 1125
 
+ix = np.genfromtxt('train_idx.csv', delimiter=',').astype(int)
+tr, val = np.split(ix, [int(0.9 * DATA_SIZE)])
+
+print(len(tr), len(val))
+
+images = np.array(images)
+masks = np.array(masks)
+
+batch_size = 3
+data_tr = DataLoader(list(zip(np.rollaxis(images[tr], 3, 1), masks[tr, np.newaxis])),
+                     batch_size=batch_size, shuffle=True)
+data_val = DataLoader(list(zip(np.rollaxis(images[val], 3, 1), masks[val, np.newaxis])),
+                      batch_size=batch_size, shuffle=False)
+
+del images
+del masks
+gc.collect()
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+print(device)
