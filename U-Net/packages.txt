@@ -1,0 +1,14 @@
+package needed:
+
+For U-Net Model:
+pytorch
+torchvision
+
+For training:
+pycocotools
+numpy
+PIL
+pytorch
+torchvision
+
+For dataset:
