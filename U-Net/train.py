@@ -1,40 +1,90 @@
+from tqdm import tqdm
 from pycocotools.coco import COCO
 import numpy as np
 from PIL import Image
-from data import CocoDataset
+
+
+
 import torch
+import torch.nn as nn
+import torch.optim as optim
 from torch.utils.data import Dataset, DataLoader
+
+from data import data_tr, data_val
 from model import UNET
+
+from utils import *
 import torchvision.transforms as transforms
 
-ann_file = 'Ingredients.v11i.coco/train/_annotations.coco.json'
-img_dir ="Ingredients.v11i.coco/train/"
-
-coco = COCO(ann_file)
-
-# Display COCO categories
-cats = coco.loadCats(coco.getCatIds())
 
 
+#Parameters
+LEARNING_RATE = 1e-4
+DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+NUM_EPOCHS = 3
+NUM_WORKERS = 2
+PIN_MEMORY = True
+LOAD_MODEL = True
 
-transform = transforms.Compose([
-    transforms.Resize((256,256)),
-    transforms.ToTensor(),
-])
 
+def train(loader, model, optimizer, loss_fn, scaler):
+    loop = tqdm(loader)
 
-dataset = CocoDataset(coco, transform=transform)
-data_loader = DataLoader(dataset, batch_size=8,shuffle=True)
+    for batch_idx, (data, targets) in enumerate(loop):
+        data = data.to(device=DEVICE)
+        data = data.to(torch.float16)
+        targets = targets.float().unsqueeze(1).to(device=DEVICE)
 
-model = UNET()
+        targets = torch.squeeze(targets, dim=1)  # Assuming the singleton dimension is at index 1
 
-criterion = torch.nn.CrossEntropyLoss()
-optimizer = torch.optim.Adam(model.parameters(),0.001)
-for epoch in range(10):
-    model.train()
-    for images,masks in data_loader:
+        # targets = torch.squeeze(targets, dim=1)
+        #forward
+        with torch.cuda.amp.autocast():
+            predictions = model(data)
+            loss = loss_fn(predictions, targets)
+
+        #backward
         optimizer.zero_grad()
-        outputs = model(images)
-        loss = criterion(outputs,masks)
-        loss.backward()
-        optimizer.step()
+        scaler.scale(loss).backward()
+        scaler.step(optimizer)
+        scaler.update()
+
+        #update tqdm loop
+        loop.set_postfix(loss=loss.item())
+
+
+
+def main():
+    model = UNET(in_channels=3, out_channels=1).to(DEVICE)
+    loss_fn = nn.BCEWithLogitsLoss()
+    optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
+
+    train_loader = data_tr
+    val_loader = data_val
+
+    if LOAD_MODEL:
+        load_checkpoint(torch.load("checkpoint.pth.tar"),model)
+    scaler = torch.cuda.amp.GradScaler()
+    for epoch in range(NUM_EPOCHS):
+        train(train_loader,model,optimizer,loss_fn,scaler)
+
+
+        #save model
+        checkpoint = {
+            "state_dict": model.state_dict(),
+            "optimizer": optimizer.state_dict()
+
+        }
+        save_checkpoint(checkpoint)
+        #check accuracy
+        check_accuracy(val_loader,model,device=DEVICE)
+        #print examples
+        save_predictions_as_imgs(
+            val_loader,model,folder="saved_images/", device=DEVICE
+        )
+
+
+
+
+if __name__ == '__main__':
+    main()

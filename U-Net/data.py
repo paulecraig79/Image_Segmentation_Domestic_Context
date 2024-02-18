@@ -1,87 +1,109 @@
-from pycocotools.coco import COCO
 import numpy as np
-from PIL import Image
+import json
+import gc
+
 import torch
-from torch.utils.data import Dataset, DataLoader
-import torchvision.transforms as transforms
-from model import UNET
-import torchvision.transforms.functional as TF
-# Specify path to annotations file
-ann_file = 'Ingredients.v11i.coco/train/_annotations.coco.json'
-img_dir ="Ingredients.v11i.coco/train/"
+from pycocotools.coco import COCO
+import cv2
+from matplotlib import pyplot as plt
+from torch.utils.data import DataLoader, TensorDataset
 
-# Initialize COCO object
-coco = COCO(ann_file)
+IMAGE_HEIGHT, IMAGE_WIDTH = 1280, 768
 
-# Display COCO categories
-cats = coco.loadCats(coco.getCatIds())
+def extend_image(img, channels=None):
+    height, width = img.shape[0], img.shape[1]
+    delta = IMAGE_WIDTH - width
+    if channels:
+        padding = np.zeros((height, int(delta / 2), channels), np.uint8)
+    else:
+        padding = np.zeros((height, int(delta / 2)), np.uint8)
+    img = np.concatenate((padding, img, padding), axis=1)
+    return img
 
-class CocoDataset(Dataset):
-    def __init__(self,coco,transform=None,target_transform=None, resize_shape=(256, 256)):
-        self.coco = coco
-        self.img_dir = img_dir
-        self.transform = transform
-        self.target_transform = target_transform
-        if isinstance(resize_shape, int):
-            self.resize_shape = (resize_shape, resize_shape)
-        elif len(resize_shape) == 2:
-            self.resize_shape = resize_shape
-        else:
-            raise ValueError("resize_shape must be an int or a tuple/list with two elements")
 
-    def __len__(self):
-        return len(self.coco.getImgIds())
+ann_dir = "Ingredients.v11i.coco/train/_annotations.coco.json"
+images_folder_path = "Ingredients.v11i.coco/train/"
 
-    def __getitem__(self, idx):
-        img_info = self.coco.loadImgs(idx)[0]
-        img_id = img_info['id']
-        img_path = img_dir + img_info['file_name']
-        img = Image.open(img_path).convert('RGB')
-
-        if self.transform:
-            img = self.transform(img)  # Apply transformations
-
-        ann_ids = self.coco.getAnnIds(imgIds=img_id, iscrowd=None)
-        masks = []
-        for ann_id in ann_ids:
-            ann = self.coco.loadAnns(ann_id)[0]
-            mask = self.coco.annToMask(ann)
-            mask_pil = TF.to_tensor(mask)  # Convert mask to PIL Image
-            mask_pil = TF.resize(mask_pil, self.resize_shape[::-1])  # Resize mask
-             # Convert mask to tensor
-            masks.append(mask_pil)
-
-        # Resize masks to the smallest shape
-        min_shape = min(mask.shape for mask in masks)
-        masks = [TF.resize(mask, min_shape[::-1]) for mask in masks]
-
-        masks = torch.stack(masks)  # Stack masks into a tensor
-
-        if self.target_transform:
-            masks = self.target_transform(masks)
-
-        return img, masks
+val_ann_dir = "Ingredients.v11i.coco/valid/_annotations.coco.json"
+val_images_folder_path = "Ingredients.v11i.coco/valid/"
 
 
 
-transform = transforms.Compose([
-    transforms.Resize((256,256)),
-    transforms.ToTensor(),
-])
 
 
-dataset = CocoDataset(coco, transform=transform)
-data_loader = DataLoader(dataset, batch_size=8,shuffle=True)
 
-model = UNET()
+def load_data(ann_dir,images_folder_path):
 
-criterion = torch.nn.CrossEntropyLoss()
-optimizer = torch.optim.Adam(model.parameters(),0.001)
-for epoch in range(10):
-    model.train()
-    for images,masks in data_loader:
-        optimizer.zero_grad()
-        outputs = model(images)
-        loss = criterion(outputs,masks)
-        loss.backward()
-        optimizer.step()
+    coco = COCO(ann_dir)
+
+    image_ids = coco.getImgIds(imgIds=coco.getImgIds())
+
+    images = []
+    masks = []
+
+    for img_id in image_ids:
+        img_info = coco.loadImgs(ids=img_id)[0]
+        image_path = f"{images_folder_path}/{img_info['file_name']}"
+        image = plt.imread(image_path)
+
+        ann_ids = coco.getAnnIds(imgIds=img_info['id'])
+        annotations = coco.loadAnns(ann_ids)
+
+
+        mask = np.zeros((img_info['height'], img_info['width']), dtype=np.uint8)
+        for ann in annotations:
+            if 'segmentation' not in ann or not ann['segmentation']:
+                # Skip annotations with empty segmentations
+                continue
+            coco_mask = coco.annToMask(ann)
+            mask = np.maximum(mask, coco_mask * ann['category_id'])
+
+        image = extend_image(image, 3)
+        mask = extend_image(mask)
+
+        target_height = 448  # Example height
+        target_width = 448
+        resized_img = cv2.resize(image, (target_width, target_height))
+        resized_mask = cv2.resize(mask, (target_width, target_height))
+        images.append(resized_img)
+        masks.append(resized_mask)
+        print(img_id)
+    return images,masks
+
+
+tr_images,tr_masks = load_data(ann_dir,images_folder_path)
+val_images,val_masks = load_data(val_ann_dir,val_images_folder_path)
+
+print(len(tr_images))
+plt.figure(figsize=(18, 6))
+for i in range(10):
+    plt.subplot(2, 10, i + 1)
+    plt.axis("off")
+    plt.imshow(val_images[i])
+
+    plt.subplot(2, 10, i + 11)
+    plt.axis("off")
+    plt.imshow(val_masks[i], cmap='gray')
+
+plt.show()
+
+
+
+
+images_tr_np = np.array(tr_images)
+masks_tr_np = np.array(tr_masks)
+images_val_np = np.array(val_images)
+masks_val_np = np.array(val_masks)
+
+batch_size = 5
+
+data_tr = DataLoader(TensorDataset(torch.tensor(np.rollaxis(images_tr_np, 3, 1)), torch.tensor(masks_tr_np[:, np.newaxis])),
+                     batch_size=batch_size, shuffle=True)
+
+# Define DataLoader for validation data
+data_val = DataLoader(TensorDataset(torch.tensor(np.rollaxis(images_val_np, 3, 1)), torch.tensor(masks_val_np[:, np.newaxis])),
+                      batch_size=batch_size, shuffle=False)
+
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+print(device)
