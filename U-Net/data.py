@@ -67,40 +67,43 @@ def load_data(ann_dir,images_folder_path):
         resized_mask = cv2.resize(mask, (target_width, target_height))
         images.append(resized_img)
         masks.append(resized_mask)
-        print(img_id)
+        #print(img_id)
     return images,masks
 
 
+#training images and masks
 tr_images,tr_masks = load_data(ann_dir,images_folder_path)
+
+#Validation images and maks
 val_images,val_masks = load_data(val_ann_dir,val_images_folder_path)
 
-print(len(tr_images))
-plt.figure(figsize=(18, 6))
-for i in range(10):
-    plt.subplot(2, 10, i + 1)
-    plt.axis("off")
-    plt.imshow(val_images[i])
 
-    plt.subplot(2, 10, i + 11)
-    plt.axis("off")
-    plt.imshow(val_masks[i], cmap='gray')
-
-plt.show()
-
-
+# plt.figure(figsize=(18, 6))
+# for i in range(10):
+#     plt.subplot(2, 10, i + 1)
+#     plt.axis("off")
+#     plt.imshow(val_images[i])
+#
+#     plt.subplot(2, 10, i + 11)
+#     plt.axis("off")
+#     plt.imshow(val_masks[i], cmap='gray')
+#
+# plt.show()
 
 
+
+#Convert images and masks into numpy array
 images_tr_np = np.array(tr_images)
 masks_tr_np = np.array(tr_masks)
 images_val_np = np.array(val_images)
 masks_val_np = np.array(val_masks)
 
+
 batch_size = 5
 
+#load data
 data_tr = DataLoader(TensorDataset(torch.tensor(np.rollaxis(images_tr_np, 3, 1)), torch.tensor(masks_tr_np[:, np.newaxis])),
                      batch_size=batch_size, shuffle=True)
-
-# Define DataLoader for validation data
 data_val = DataLoader(TensorDataset(torch.tensor(np.rollaxis(images_val_np, 3, 1)), torch.tensor(masks_val_np[:, np.newaxis])),
                       batch_size=batch_size, shuffle=False)
 

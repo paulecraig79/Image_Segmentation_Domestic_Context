@@ -24,7 +24,7 @@ DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 NUM_EPOCHS = 3
 NUM_WORKERS = 2
 PIN_MEMORY = True
-LOAD_MODEL = True
+LOAD_MODEL = False
 
 
 def train(loader, model, optimizer, loss_fn, scaler):
@@ -61,7 +61,8 @@ def main():
 
     train_loader = data_tr
     val_loader = data_val
-
+    #if first run set Load model to false
+    #If checkpoint has been saved or in directory then set load model to true
     if LOAD_MODEL:
         load_checkpoint(torch.load("checkpoint.pth.tar"),model)
     scaler = torch.cuda.amp.GradScaler()
