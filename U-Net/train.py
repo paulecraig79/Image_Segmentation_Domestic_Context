@@ -21,10 +21,10 @@ import torchvision.transforms as transforms
 #Parameters
 LEARNING_RATE = 1e-4
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-NUM_EPOCHS = 3
+NUM_EPOCHS = 10
 NUM_WORKERS = 2
 PIN_MEMORY = True
-LOAD_MODEL = False
+LOAD_MODEL = True
 
 
 def train(loader, model, optimizer, loss_fn, scaler):

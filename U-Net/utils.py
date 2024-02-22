@@ -10,29 +10,36 @@ def load_checkpoint(checkpoint, model):
     print('Loading checkpoint..')
     model.load_state_dict(checkpoint['state_dict'])
 
-def check_accuracy(loader,model,device="cuda"):
+def check_accuracy(loader, model, device="cuda"):
     num_correct = 0
     num_pixels = 0
     dice_score = 0
     model.eval()
     with torch.no_grad():
-        for x,y in loader:
+        for x, y in loader:
             x = x.float().to(device)
-            x = x.float()
-            y = y.to(device).unsqueeze(1)
-            model = model.float()
-            preds = torch.sigmoid(model(x))
-            preds = (preds > 0.5).float()
-            num_correct += (preds == y).sum()
-            num_pixels += torch.numel(preds)
-            dice_score += (2 * (preds * y).sum()) / (
-                (preds + y).sum() + 1e-8
-            )
+            y = y.to(device).squeeze(1)  # Squeeze the channel dimension
+            preds_sigmoid = torch.sigmoid(model(x))
+            preds_threshold = (preds_sigmoid > 0.5).float()
+
+            # Visualize a sample of preds_thresholded and y for comparison
+            print("Sample of preds_thresholded:")
+            print(preds_threshold[0, 0, :10, :10])  # Print the first 10x10 values of the first prediction
+            print("\nSample of y:")
+            print(y[0, :10, :10])  # Print the first 10x10 values of the first ground truth label
+
+            num_correct_manual = torch.sum((preds_threshold == y).float()).item()
+            print("\nNumber of correct predictions (manual calculation):", num_correct_manual)
+
+
+            num_correct += (preds_threshold == y).sum().item()
+            num_pixels += torch.numel(y)
+            dice_score += (2 * (preds_threshold * y).sum()) / ((preds_threshold + y).sum() + 1e-8)
 
     print(
         f"Got {num_correct}/{num_pixels} with acc {num_correct/num_pixels*100:.2f}"
     )
-    print(f"Dice score: {dice_score / len(loader)}")
+    print("Dice score:", dice_score.item())
     model.train()
 
 def save_predictions_as_imgs(
@@ -47,6 +54,6 @@ def save_predictions_as_imgs(
         torchvision.utils.save_image(
             preds, f"{folder}/pred_{idx}.png"
         )
-        torchvision.utils.save_image(y.unsqueeze(1), f"{folder}{idx}.png")
+
 
     model.train()
