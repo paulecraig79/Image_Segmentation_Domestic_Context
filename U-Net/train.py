@@ -24,7 +24,7 @@ DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 NUM_EPOCHS = 10
 NUM_WORKERS = 2
 PIN_MEMORY = True
-LOAD_MODEL = True
+LOAD_MODEL = False
 
 
 def train(loader, model, optimizer, loss_fn, scaler):
@@ -55,6 +55,7 @@ def train(loader, model, optimizer, loss_fn, scaler):
 
 
 def main():
+    print(DEVICE)
     model = UNET(in_channels=3, out_channels=1).to(DEVICE)
     loss_fn = nn.BCEWithLogitsLoss()
     optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
@@ -77,8 +78,8 @@ def main():
 
         }
         save_checkpoint(checkpoint)
-        #check accuracy
-        check_accuracy(val_loader,model,device=DEVICE)
+        # #check accuracy
+        # check_accuracy(val_loader,model,device=DEVICE)
         #print examples
         save_predictions_as_imgs(
             val_loader,model,folder="saved_images/", device=DEVICE

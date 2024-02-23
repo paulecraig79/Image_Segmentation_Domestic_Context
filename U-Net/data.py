@@ -21,11 +21,11 @@ def extend_image(img, channels=None):
     return img
 
 
-ann_dir = "Ingredients.v11i.coco/train/_annotations.coco.json"
-images_folder_path = "Ingredients.v11i.coco/train/"
+ann_dir = "Ingredients-11/train/_annotations.coco.json"
+images_folder_path = "Ingredients-11/train/"
 
-val_ann_dir = "Ingredients.v11i.coco/valid/_annotations.coco.json"
-val_images_folder_path = "Ingredients.v11i.coco/valid/"
+val_ann_dir = "Ingredients-11/valid/_annotations.coco.json"
+val_images_folder_path = "Ingredients-11/valid/"
 
 
 
@@ -65,6 +65,9 @@ def load_data(ann_dir,images_folder_path):
         target_width = 448
         resized_img = cv2.resize(image, (target_width, target_height))
         resized_mask = cv2.resize(mask, (target_width, target_height))
+
+        resized_mask = (resized_mask > 0).astype(np.uint8)
+
         images.append(resized_img)
         masks.append(resized_mask)
         #print(img_id)
@@ -108,5 +111,3 @@ data_val = DataLoader(TensorDataset(torch.tensor(np.rollaxis(images_val_np, 3, 1
                       batch_size=batch_size, shuffle=False)
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
-print(device)
