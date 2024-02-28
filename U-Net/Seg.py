@@ -13,7 +13,6 @@ import seaborn as sns
 import gc
 from IPython.display import clear_output
 
-from SegNet.data import data_tr, data_val
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 print(device)
@@ -357,7 +356,7 @@ def train(model, opt, loss_fn, epochs, data_tr, data_val, scheduler=None):
 
     return loss_history, score_history
 
-segnet_model_bce = SegNet().to(device)
-max_epochs = 3
-optimizer = optim.AdamW(segnet_model_bce.parameters(), lr=0.0001)
-loss_hist_1, score_hist_1 = train(segnet_model_bce, optimizer, bce_loss, max_epochs, data_tr, data_val)
+# segnet_model_bce = SegNet().to(device)
+# max_epochs = 3
+# optimizer = optim.AdamW(segnet_model_bce.parameters(), lr=0.0001)
+# loss_hist_1, score_hist_1 = train(segnet_model_bce, optimizer, bce_loss, max_epochs, data_tr, data_val)
