@@ -89,36 +89,35 @@ def load_data(ann_dir,images_folder_path):
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
-Input = input("[1]U-NET [2]SegNet [3]DeepLabV3 [4]U-Net++\n")
-
-if Input=="1":
-    model = UNET(in_channels=3, out_channels=1).to(device=DEVICE)
-    checkpoint_path = 'Unet checkpoint/checkpoint.pth.tar'
-elif Input=="2":
-    model = SegNet().to(DEVICE)
-    checkpoint_path = 'SegNet Checkpoint/checkpoint.pth.tar'
-elif Input =="3":
-    model = DeepLab(num_classes=1).to(device=DEVICE)
-    checkpoint_path = 'DeepLab/checkpoint.pth.tar'
-elif Input == "4":
-    model = NestedUNet(input_channels=3, output_channels=1,num_classes=1).to(device=DEVICE)
-    checkpoint_path = 'Unetplus/checkpoint.pth.tar'
 
 
-try:
-    checkpoint = torch.load(checkpoint_path,map_location=DEVICE)
-    if checkpoint is None:
-        raise ValueError("Checkpoint is None.")
-    print("Checkpoint loaded successfully.")
-except FileNotFoundError:
-    print(f"Checkpoint file '{checkpoint_path}' not found.")
-except Exception as e:
-    print(f"Error loading checkpoint: {e}")
+model_Unet = UNET(in_channels=3, out_channels=1).to(device=DEVICE)
+checkpoint_path_Unet = 'Unet checkpoint/checkpoint.pth.tar'
+
+model_Segnet = SegNet().to(DEVICE)
+checkpoint_path_Segnet = 'SegNet Checkpoint/checkpoint.pth.tar'
+
+model_Deeplab = DeepLab(num_classes=1).to(device=DEVICE)
+checkpoint_path_Deeplab = 'DeepLab/checkpoint.pth.tar'
+
+model_UnetPlus = NestedUNet(input_channels=3, output_channels=1,num_classes=1).to(device=DEVICE)
+checkpoint_path_UnetPLus = 'Unetplus/checkpoint.pth.tar'
+
+
+
+checkpoint_unet = torch.load(checkpoint_path_Unet,map_location=DEVICE)
+checkpoint_Segnet = torch.load(checkpoint_path_Segnet, map_location=DEVICE)
+checkpoint_DeepLab = torch.load(checkpoint_path_Deeplab, map_location=DEVICE)
+checkpoint_Unetplus = torch.load(checkpoint_path_UnetPLus, map_location=DEVICE)
 
 
 
 
-model.load_state_dict(checkpoint['state_dict'])
+
+model_Unet.load_state_dict(checkpoint_unet['state_dict'])
+model_Segnet.load_state_dict(checkpoint_Segnet['state_dict'])
+model_Deeplab.load_state_dict(checkpoint_DeepLab['state_dict'])
+model_UnetPlus.load_state_dict(checkpoint_Unetplus['state_dict'])
 
 
 test_images,Ground_truth = load_data(ANN_DIR,IMG_DIR)
@@ -129,7 +128,32 @@ ground_truth_np = np.array(Ground_truth)
 
 test_dl = DataLoader(TensorDataset(torch.tensor(np.rollaxis(test_images_np, 3, 1)), torch.tensor(ground_truth_np[:, np.newaxis])),
                      batch_size=1, shuffle=True)
+print("\n Evaluations\n")
 
+print("Number of test images:", len(test_dl))
+print("\n")
+
+print("U-Net")
+print("==============")
 save_predictions_as_imgs(
-   test_dl, model, device=DEVICE
+   test_dl, model_Unet, device=DEVICE
+)
+print("\n")
+
+print("U-Net++")
+print("==============")
+save_predictions_as_imgs(
+   test_dl, model_UnetPlus, device=DEVICE
+)
+print("\n")
+print("SegNet")
+print("==============")
+save_predictions_as_imgs(
+   test_dl, model_Segnet, device=DEVICE
+)
+print("\n")
+print("DeepLabV3+")
+print("==============")
+save_predictions_as_imgs(
+   test_dl, model_Deeplab, device=DEVICE
 )

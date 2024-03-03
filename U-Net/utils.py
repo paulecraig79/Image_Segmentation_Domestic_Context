@@ -72,7 +72,6 @@ def save_predictions_as_imgs(
         print(f"Average Precision: {global_prec / len(loader) * 100:.4f}%")
         print(f"Average Recall: {global_recall / len(loader) * 100:.4f}%")
         print(f"Average F1-Score: {global_f1_score / len(loader) * 100:.4f}%")
-        print(f"Number of images: {len(loader)}")
         End_Time = time.time()
         Total_Time = End_Time - Start_time
         print(f"Total time: {Total_Time}")
