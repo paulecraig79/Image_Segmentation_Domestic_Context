@@ -1,24 +1,26 @@
-import argparse
-import logging
-import os
 import torch
-import torch
-import torch.nn.functional as F
-import numpy as np
-from PIL import Image
-import torchvision.transforms as transforms
+import torch.nn as nn
 from pycocotools.coco import COCO
+
 from torch.utils.data import TensorDataset, DataLoader
 from utils import save_predictions_as_imgs
-from model import UNET
-from Seg import SegNet
-import cv2
 
+import cv2
+from torchvision.models.segmentation import deeplabv3_resnet101
 from PIL import Image
 import matplotlib.pyplot as plt
 import numpy as np
 from torchvision import transforms
 import torch.nn.functional as F
+
+
+#Models
+from Models.UNet import UNET
+from Models.Seg import SegNet
+from Models.Unetplus import NestedUNet
+from Models.DeepLabV3plus import DeepLab
+
+
 #parameters
 NUM_CLASSES = 1
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
@@ -27,6 +29,11 @@ THRESHOLD = 0.5
 ANN_DIR = "Ingredients-11/test/_annotations.coco.json"
 IMG_DIR ="Ingredients-11/test/"
 IMAGE_HEIGHT, IMAGE_WIDTH = 1280, 768
+
+
+
+
+
 def extend_image(img, channels=None):
     height, width = img.shape[0], img.shape[1]
     delta = IMAGE_WIDTH - width
@@ -35,20 +42,6 @@ def extend_image(img, channels=None):
     else:
         padding = np.zeros((height, int(delta / 2)), np.uint8)
     img = np.concatenate((padding, img, padding), axis=1)
-    return img
-def preprocess(image,scale_factor):
-    w,h = image.size
-    newW,newH = int(w*scale_factor), int(h*scale_factor)
-    image = image.resize((newW, newH),Image.BICUBIC)
-    img = np.asarray(image)
-
-    if img.ndim == 2:
-        img = img[np.newaxis,...]
-    else:
-        img = img.transpose((2,0,1))
-    if(img>1).any():
-        img = img/255.0
-
     return img
 
 def load_data(ann_dir,images_folder_path):
@@ -92,54 +85,11 @@ def load_data(ann_dir,images_folder_path):
         #print(img_id)
     return images,masks
 
-def predict_and_plot(model, image_path, device, threshold=0.5):
-    # Set the model to evaluation mode
-    model.eval()
-
-    # Define image transformations
-    transform = transforms.Compose([
-        transforms.ToPILImage(),  # Convert NumPy array to PIL Image
-        transforms.Resize((450, 450)),  # Resize image to the required input size
-        transforms.ToTensor(),  # Convert PIL Image to tensor
-        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])  # Normalize the image
-    ])
-    original_image = Image.open(image_path)
-    # Load and preprocess the image
-    image = np.asarray(Image.open(image_path).convert("RGB"))  # Load image as NumPy array
-    image = transform(image).unsqueeze(0)  # Add batch dimension  # Add batch dimension
-
-      # Add batch dimension
-
-    # Move the image to the device
-    image = image.to(device)
-
-    # Forward pass through the model
-    with torch.no_grad():
-        preds = model(image)
-        preds = F.interpolate(preds, size=(original_image.size[1], original_image.size[0]), mode='bilinear', align_corners=False)
-        mask = torch.sigmoid(preds) > threshold
-
-    # Convert predictions to numpy array and squeeze to remove batch dimension
-    mask = mask.cpu().squeeze().numpy().astype(np.uint8)
-
-    # Plot the original image and the predicted mask
-    plot_img_and_mask(original_image, mask)
-
-
-def plot_img_and_mask(img, mask):
-    fig, ax = plt.subplots(1, 2)
-    ax[0].set_title('Input image')
-    ax[0].imshow(img)
-    ax[1].set_title('Mask (Foreground)')
-    ax[1].imshow(mask == 1, cmap='binary')  # Plot only the foreground class (class 1)
-    plt.xticks([]), plt.yticks([])
-    plt.show()
-
 
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
-Input = input("[1]U-NET [2]SegNet\n")
+Input = input("[1]U-NET [2]SegNet [3]DeepLabV3 [4]U-Net++\n")
 
 if Input=="1":
     model = UNET(in_channels=3, out_channels=1).to(device=DEVICE)
@@ -147,6 +97,12 @@ if Input=="1":
 elif Input=="2":
     model = SegNet().to(DEVICE)
     checkpoint_path = 'SegNet Checkpoint/checkpoint.pth.tar'
+elif Input =="3":
+    model = DeepLab(num_classes=1).to(device=DEVICE)
+    checkpoint_path = 'DeepLab/checkpoint.pth.tar'
+elif Input == "4":
+    model = NestedUNet(input_channels=3, output_channels=1,num_classes=1).to(device=DEVICE)
+    checkpoint_path = 'Unetplus/checkpoint.pth.tar'
 
 
 try:
@@ -159,7 +115,7 @@ except FileNotFoundError:
 except Exception as e:
     print(f"Error loading checkpoint: {e}")
 
-print(checkpoint.keys())
+
 
 
 model.load_state_dict(checkpoint['state_dict'])

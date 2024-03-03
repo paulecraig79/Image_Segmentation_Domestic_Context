@@ -1,6 +1,6 @@
 import numpy as np
 import json
-import gc
+
 
 import torch
 from pycocotools.coco import COCO
@@ -61,7 +61,7 @@ def load_data(ann_dir,images_folder_path):
         image = extend_image(image, 3)
         mask = extend_image(mask)
 
-        target_height = 448  # Example height
+        target_height = 448
         target_width = 448
         resized_img = cv2.resize(image, (target_width, target_height))
         resized_mask = cv2.resize(mask, (target_width, target_height))
@@ -81,18 +81,6 @@ tr_images,tr_masks = load_data(ann_dir,images_folder_path)
 val_images,val_masks = load_data(val_ann_dir,val_images_folder_path)
 
 
-# plt.figure(figsize=(18, 6))
-# for i in range(10):
-#     plt.subplot(2, 10, i + 1)
-#     plt.axis("off")
-#     plt.imshow(val_images[i])
-#
-#     plt.subplot(2, 10, i + 11)
-#     plt.axis("off")
-#     plt.imshow(val_masks[i], cmap='gray')
-#
-# plt.show()
-
 
 
 #Convert images and masks into numpy array
@@ -109,7 +97,7 @@ class_labels = []
 for category in coco_annotations['categories']:
     class_labels.append(category['name'])
 class_labels.pop(0)
-#print("Class Labels:", class_labels)
+
 batch_size = 5
 
 #load data

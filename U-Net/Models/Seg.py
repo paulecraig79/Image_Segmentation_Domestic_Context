@@ -355,8 +355,3 @@ def train(model, opt, loss_fn, epochs, data_tr, data_val, scheduler=None):
               f' \n\tVal score: {val_score};')
 
     return loss_history, score_history
-
-# segnet_model_bce = SegNet().to(device)
-# max_epochs = 3
-# optimizer = optim.AdamW(segnet_model_bce.parameters(), lr=0.0001)
-# loss_hist_1, score_hist_1 = train(segnet_model_bce, optimizer, bce_loss, max_epochs, data_tr, data_val)

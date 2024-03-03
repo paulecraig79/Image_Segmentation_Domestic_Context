@@ -1,20 +1,16 @@
 from tqdm import tqdm
-from pycocotools.coco import COCO
-import numpy as np
-from PIL import Image
-
-from Seg import SegNet
-
-import torch
+import torch.nn.functional as F
 import torch.nn as nn
 import torch.optim as optim
-from torch.utils.data import Dataset, DataLoader
-
-from data import data_tr, data_val, class_labels
-from model import UNET
-
+from data import data_tr, data_val
 from utils import *
-import torchvision.transforms as transforms
+
+
+#Models
+from Models.UNet import UNET
+from Models.Seg import SegNet
+from Models.Unetplus import NestedUNet
+from Models.DeepLabV3plus import DeepLab
 
 
 
@@ -27,21 +23,27 @@ PIN_MEMORY = True
 LOAD_MODEL = False
 
 
-def train(loader, model,labels, optimizer, loss_fn, scaler):
+
+
+#Train function
+def train(loader, model,optimizer, loss_fn, scaler):
+
     loop = tqdm(loader)
 
     for batch_idx, (data, targets) in enumerate(loop):
         data = data.to(device=DEVICE)
         data = data.to(torch.float16)
-        targets = targets.float().unsqueeze(1).to(device=DEVICE)
+        targets = targets.float().to(device=DEVICE)
 
-        targets = torch.squeeze(targets, dim=1)  # Assuming the singleton dimension is at index 1
 
-        # targets = torch.squeeze(targets, dim=1)
+
+
         #forward
         with torch.cuda.amp.autocast():
             predictions = model(data)
-            loss = loss_fn(predictions, targets)
+
+            target_resized = F.interpolate(targets, size=predictions.size()[2:], mode='nearest')
+            loss = loss_fn(predictions, target_resized)
 
         #backward
         optimizer.zero_grad()
@@ -56,19 +58,24 @@ def train(loader, model,labels, optimizer, loss_fn, scaler):
 
 def main():
     print(DEVICE)
-    model = SegNet().to(DEVICE)
+    model = UNET(in_channels=3,out_channels=1).to(DEVICE)
+
     loss_fn = nn.BCEWithLogitsLoss()
     optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
-    labels = class_labels
+
+
+    #Import training and validation data
     train_loader = data_tr
     val_loader = data_val
+
+
     #if first run set Load model to false
     #If checkpoint has been saved or in directory then set load model to true
     if LOAD_MODEL:
         load_checkpoint(torch.load("Unet checkpoint/checkpoint.pth.tar"), model)
     scaler = torch.cuda.amp.GradScaler()
     for epoch in range(NUM_EPOCHS):
-        train(train_loader,model,labels,optimizer,loss_fn,scaler)
+        train(train_loader,model,optimizer,loss_fn,scaler)
 
 
         #save model
@@ -79,14 +86,6 @@ def main():
 
         }
         save_checkpoint(checkpoint)
-        # #check accuracy
-        # check_accuracy(val_loader,model,device=DEVICE)
-        #print examples
-        # save_predictions_as_imgs(
-        #     val_loader,model,device=DEVICE
-        # )
-
-
 
 
 if __name__ == '__main__':

@@ -14,57 +14,6 @@ def load_checkpoint(checkpoint, model):
     print('Loading checkpoint..')
     model.load_state_dict(checkpoint['state_dict'])
 
-def check_accuracy(loader, model, device="cuda"):
-    num_correct = 0
-    num_pixels = 0
-    dice_score = 0
-    model.eval()
-
-    with torch.no_grad():
-        for x,y in loader:
-            x = x.float().to(device)
-            y= y.to(device).unsqueeze(1)
-            preds = model(x)
-            preds = (preds > 0.5).float()
-            num_correct += (preds == y).sum().item()
-            num_pixels += y.size(0) * y.size(1) *y.size(2) *y.size(3)
-
-            dice_score += (2 * (preds * y).sum()) / (
-                (preds + y).sum() + 1e-8
-            )
-
-
-    print(
-        f"Got {num_correct}/{num_pixels} with acc {num_correct/num_pixels*100:.2f}"
-    )
-    print(f"Dice score: {dice_score/len(loader)}")
-
-
-
-    model.train()
-
-
-def plot_predictions(
-    loader, model, device="cuda"
-):
-    model.eval()
-    with torch.no_grad():
-        for idx, (x, y) in enumerate(loader):
-            x = x.float().to(device=device)
-            y = y.to(device=device)
-            preds = torch.sigmoid(model(x))
-            preds = (preds > 0.5).float()
-            plt.figure(figsize=(12, 6))
-            for i in range(len(x)):
-                plt.subplot(1, len(x), i + 1)
-                plt.imshow(preds[i].cpu().numpy().squeeze(), cmap='gray')
-                plt.title(f'Prediction {idx * len(x) + i}:')
-                plt.axis('off')
-            plt.show()
-
-    model.train()
-
-
 
 def save_predictions_as_imgs(
     loader, model, device="cuda"
@@ -95,8 +44,8 @@ def save_predictions_as_imgs(
             #Plot predictions
             #plt.figure(figsize=(12, 6))
             for i in range(len(x)):
-                # plt.subplot(1, len(x), i + 1)
-                # plt.imshow(preds[i].cpu().numpy().squeeze(), cmap='gray')
+                #plt.subplot(1, len(x), i + 1)
+                #plt.imshow(preds[i].cpu().numpy().squeeze(), cmap='gray')
 
 
 
@@ -113,9 +62,9 @@ def save_predictions_as_imgs(
                 global_f1_score += f1
 
 
-
-                # plt.title(f'Prediction {idx*len(x) + i}: acc: {accuracy*100:.4f}% + Precision: {precision*100:.4f}% + Recall: {recall*100:.4f}% + F1: {f1*100:.4f}%')
-                # plt.axis('off')
+            #
+                #plt.title(f'Prediction {idx*len(x) + i}: acc: {accuracy*100:.4f}% + Precision: {precision*100:.4f}% + Recall: {recall*100:.4f}% + F1: {f1*100:.4f}%')
+                #plt.axis('off')
             #plt.show()
 
 
@@ -149,3 +98,5 @@ def dice_coef(groundtruth_mask, pred_mask):
     total_sum = np.sum(pred_mask) + np.sum(groundtruth_mask)
     dice = np.mean(2*intersect/total_sum)
     return dice
+
+
