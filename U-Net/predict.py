@@ -1,13 +1,13 @@
 import torch
-import torch.nn as nn
+
 from pycocotools.coco import COCO
 
 from torch.utils.data import TensorDataset, DataLoader
 from utils import save_predictions_as_imgs
 
 import cv2
-from torchvision.models.segmentation import deeplabv3_resnet101
-from PIL import Image
+
+
 import matplotlib.pyplot as plt
 import numpy as np
 from torchvision import transforms
