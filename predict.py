@@ -27,7 +27,7 @@ DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 IMAGE_PATH = "Ingredients-11/test/"
 THRESHOLD = 0.5
 ANN_DIR = "Ingredients-11/test/_annotations.coco.json"
-IMG_DIR ="Ingredients-11/test/"
+IMG_DIR = "Ingredients-11/test/"
 IMAGE_HEIGHT, IMAGE_WIDTH = 1280, 768
 
 

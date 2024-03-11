@@ -90,9 +90,9 @@ def main():
 
 
 
-    trainloop(model_Unet,"Unet checkpoint/")
-    trainloop(model_Segnet, "Segnet checkpoint/")
-    trainloop(model_deeplab, "Deeplab/")
+    trainloop(model_Unet, "Unet checkpoint/")
+    trainloop(model_Segnet, "SegNet Checkpoint/")
+    trainloop(model_deeplab, "DeepLab/")
     trainloop(model_Unetplus, "Unetplus/")
 
 
