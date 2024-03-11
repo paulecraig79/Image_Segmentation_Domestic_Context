@@ -12,12 +12,6 @@ class SegNet(nn.Module):
     def __init__(self):
         super().__init__()
 
-        # encoder (downsampling)
-        # Each enc_conv/dec_conv block should look like this:
-        # nn.Sequential(
-        #     nn.Conv2d(...),
-        #     ... (2 or 3 conv layers with relu and batchnorm),
-        # )
         self.enc_conv0 = nn.Sequential(
             nn.Conv2d(3, 64, kernel_size=3, padding=1),
             nn.BatchNorm2d(64),

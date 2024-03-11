@@ -89,14 +89,6 @@ masks_tr_np = np.array(tr_masks)
 images_val_np = np.array(val_images)
 masks_val_np = np.array(val_masks)
 
-coco_annotations_file = 'Ingredients-11/valid/_annotations.coco.json'  # Replace with the path to your COCO annotations file
-with open(coco_annotations_file, 'r') as f:
-    coco_annotations = json.load(f)
-
-class_labels = []
-for category in coco_annotations['categories']:
-    class_labels.append(category['name'])
-class_labels.pop(0)
 
 batch_size = 5
 
@@ -106,4 +98,3 @@ data_tr = DataLoader(TensorDataset(torch.tensor(np.rollaxis(images_tr_np, 3, 1))
 data_val = DataLoader(TensorDataset(torch.tensor(np.rollaxis(images_val_np, 3, 1)), torch.tensor(masks_val_np[:, np.newaxis])),
                       batch_size=batch_size, shuffle=False)
 
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
